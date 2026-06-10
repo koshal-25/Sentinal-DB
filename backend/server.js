@@ -15,8 +15,17 @@ const PORT = process.env.PORT || 3000;
 
 // ---------- Security Middleware ----------
 app.use(helmet());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:5174'];
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:5174'],
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow any *.vercel.app subdomain
+    if (/\.vercel\.app$/.test(origin)) return cb(null, true);
+    cb(new Error('CORS: origin not allowed'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -44,14 +53,6 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/audit',     require('./routes/audit'));
 app.use('/api/court',     require('./routes/court'));
 
-// Serve frontend static files in production
-app.use(express.static(path.join(__dirname, '../sentinel-frontend/dist')));
-
-// Catch-all route to serve React's index.html for client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../sentinel-frontend/dist', 'index.html'));
-});
-
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', ts: new Date() }));
 
@@ -61,5 +62,9 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(PORT, () => console.log(`\uD83D\uDD35 Sentinel CRMS running on port ${PORT}`));
+// Only call listen when running locally (not on Vercel)
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => console.log(`🔵 Sentinel CRMS running on port ${PORT}`));
+}
+
 module.exports = app;

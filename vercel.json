@@ -1,10 +1,26 @@
 {
   "version": 2,
-  "buildCommand": "cd sentinel-frontend && npm install && npm run build",
-  "outputDirectory": "sentinel-frontend/dist",
-  "installCommand": "echo skip",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "builds": [
+    {
+      "src": "sentinel-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/sentinel-frontend/$1"
+    }
   ]
 }
